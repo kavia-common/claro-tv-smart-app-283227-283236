@@ -1,48 +1,67 @@
-import React, { useState, useEffect } from 'react';
-import logo from './logo.svg';
+import React, { useEffect } from 'react';
 import './App.css';
+import './theme.css';
+import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
+import { TopNav } from './components/TopNav';
+import { SideMenu } from './components/SideMenu';
+import HomeScreen from './pages/HomeScreen';
+import SubscriptionScreen from './pages/SubscriptionScreen';
+import SettingsScreen from './pages/SettingsScreen';
+import { MemoryPanel } from './components/MemoryPanel';
+import { FocusProvider } from './hooks/useFocusManager';
+import { useRemoteNavigation } from './hooks/useRemoteNavigation';
+
+// Root shell for remote navigation back handler
+function Shell() {
+  const navigate = useNavigate();
+  useRemoteNavigation({
+    onBack: () => {
+      // Try to go back in history else go home
+      if (window.history.length > 1) navigate(-1);
+      else navigate('/');
+    }
+  });
+
+  useEffect(() => {
+    // Set a TV-friendly default focus at startup
+    const t = setTimeout(() => {
+      const first = document.querySelector('.sidemenu .sidemenu-item');
+      if (first) first.focus();
+    }, 50);
+    return () => clearTimeout(t);
+  }, []);
+
+  return (
+    <div className="tv-app">
+      <TopNav />
+      <SideMenu />
+      <main className="main" role="main">
+        <Routes>
+          <Route path="/" element={<HomeScreen />} />
+          <Route path="/subscriptions" element={<SubscriptionScreen />} />
+          <Route path="/settings" element={<SettingsScreen />} />
+        </Routes>
+      </main>
+      <MemoryPanel />
+    </div>
+  );
+}
 
 // PUBLIC_INTERFACE
 function App() {
-  const [theme, setTheme] = useState('light');
-
-  // Effect to apply theme to document element
+  /** App entry rendering TV layout, routing, focus and remote nav */
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-  }, [theme]);
-
-  // PUBLIC_INTERFACE
-  const toggleTheme = () => {
-    setTheme(prevTheme => prevTheme === 'light' ? 'dark' : 'light');
-  };
+    // Global, TV-optimized scroll behavior
+    document.documentElement.style.scrollBehavior = 'smooth';
+    return () => { document.documentElement.style.scrollBehavior = ''; };
+  }, []);
 
   return (
-    <div className="App">
-      <header className="App-header">
-        <button 
-          className="theme-toggle" 
-          onClick={toggleTheme}
-          aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
-        >
-          {theme === 'light' ? '🌙 Dark' : '☀️ Light'}
-        </button>
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <p>
-          Current theme: <strong>{theme}</strong>
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <FocusProvider>
+      <BrowserRouter>
+        <Shell />
+      </BrowserRouter>
+    </FocusProvider>
   );
 }
 
